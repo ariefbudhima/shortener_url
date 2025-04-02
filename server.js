@@ -2,10 +2,37 @@ require("dotenv").config();
 const express = require("express");
 const { Pool } = require("pg");
 const { v4: uuidv4 } = require("uuid");
+const cors = require("cors");
 
 const app = express();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+// Get allowed origin from environment variable
+const allowedOriginBase = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+
+// CORS configuration using environment variable
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Create both http and https versions of the allowed origin
+    const allowedOrigins = [
+      `http://${allowedOriginBase}`,
+      `https://${allowedOriginBase}`
+      `http://localhost:3000`,
+      `https://localhost:3000`
+    ];
+    
+    // Allow the origins from env variable or requests with no origin (like curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.post("/shorten", async (req, res) => {
