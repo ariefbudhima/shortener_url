@@ -1,0 +1,39 @@
+name: Deploy to VPS with Docker Compose
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.VPS_DEPLOY_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to VPS
+      env:
+        VPS_USER: ${{ secrets.VPS_USER }}
+        VPS_HOST: ${{ secrets.VPS_HOST }}
+        APP_PATH: ${{ secrets.APP_PATH }}
+      run: |
+        ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
+        # Pindah ke direktori aplikasi di VPS
+        cd ${{ secrets.APP_PATH }}
+
+        # Pull kode terbaru dari GitHub
+        git pull origin main
+
+        # Build ulang dan jalankan stack Docker Compose
+        docker-compose down
+        docker-compose up -d --build
+        ENDSSH
